@@ -8,13 +8,17 @@ from load_data import load_dataset
 from experiment import run_experiment
 from models import get_classifier_list
 
-import warnings
 from sklearn.exceptions import ConvergenceWarning
+import warnings
 
-warnings.filterwarnings("ignore", category=UserWarning)
-warnings.filterwarnings("ignore", category=RuntimeWarning)
-warnings.filterwarnings("ignore", category=FutureWarning)
+
+
 warnings.filterwarnings("ignore", category=ConvergenceWarning)
+warnings.filterwarnings("ignore", category=UserWarning)
+warnings.filterwarnings("ignore", category=FutureWarning)
+warnings.filterwarnings("ignore", category=RuntimeWarning)
+warnings.filterwarnings("ignore")
+
 
 # ---------------------------------------------------------
 # CONFIGURATION

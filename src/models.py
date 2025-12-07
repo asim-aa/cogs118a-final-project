@@ -28,21 +28,22 @@ def get_param_grid(model_name):
 
     if model_name == "svm":
         return {
-            "C": [0.1, 1, 10],
+            "C": [1],
             "kernel": ["rbf"],
-            "gamma": ["scale", "auto"]
+            "gamma": ["scale"],
         }
+        
     
     if model_name == "rf":
         return {
-            "n_estimators": [100, 300],
-            "max_depth": [None, 5, 10],
+            "n_estimators": [100],
+            "max_depth": [None],
             "min_samples_split": [2, 4]
         }
     
     if model_name == "mlp":
         return {
-            "hidden_layer_sizes": [(16,), (32,), (64,), (32, 16)],
+            "hidden_layer_sizes": [(32,)],
             "learning_rate_init": [0.001, 0.01],
             "activation": ["relu"]
         }
