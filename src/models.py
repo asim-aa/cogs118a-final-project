@@ -1,6 +1,7 @@
 from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.neural_network import MLPClassifier
+from sklearn.neighbors import KNeighborsClassifier
 
 
 # ---------------------------------------------------------
@@ -16,6 +17,9 @@ def get_classifier(model_name):
     
     if model_name == "mlp":
         return MLPClassifier(max_iter=500)
+
+    if model_name == "knn":
+        return KNeighborsClassifier()
     
     raise ValueError(f"Unknown classifier: {model_name}")
 
@@ -33,7 +37,6 @@ def get_param_grid(model_name):
             "gamma": ["scale"],
         }
         
-    
     if model_name == "rf":
         return {
             "n_estimators": [100],
@@ -46,6 +49,12 @@ def get_param_grid(model_name):
             "hidden_layer_sizes": [(32,)],
             "learning_rate_init": [0.001, 0.01],
             "activation": ["relu"]
+        }
+
+    if model_name == "knn":
+        return {
+            "n_neighbors": [3, 5, 7],
+            "weights": ["uniform", "distance"]
         }
     
     raise ValueError(f"No param grid for {model_name}")
@@ -60,4 +69,5 @@ def get_classifier_list():
         ("svm", SVC(), get_param_grid("svm")),
         ("rf", RandomForestClassifier(), get_param_grid("rf")),
         ("mlp", MLPClassifier(max_iter=500), get_param_grid("mlp")),
+        ("knn", KNeighborsClassifier(), get_param_grid("knn")),
     ]

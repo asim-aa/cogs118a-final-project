@@ -7,37 +7,25 @@ from datetime import datetime
 from load_data import load_dataset
 from experiment import run_experiment
 from models import get_classifier_list
+from sklearn.metrics import f1_score, roc_auc_score, log_loss
 
 from sklearn.exceptions import ConvergenceWarning
 import warnings
-
-
-
 warnings.filterwarnings("ignore", category=ConvergenceWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 warnings.filterwarnings("ignore")
 
-
-# ---------------------------------------------------------
-# CONFIGURATION
-# ---------------------------------------------------------
-
 DATASETS = ["heart", "bank", "breast"]
-TRAIN_SPLITS = [0.2, 0.5, 0.8]    # 20/80, 50/50, 80/20
-TRIALS = [1, 2, 3]                # three runs per config
+TRAIN_SPLITS = [0.2, 0.5, 0.8]    
+TRIALS = [1, 2, 3]               
 
 RAW_RESULTS_DIR = Path("results/raw")
 AGG_RESULTS_DIR = Path("results/aggregated")
 
 RAW_RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 AGG_RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-
-
-# ---------------------------------------------------------
-# RUN ALL EXPERIMENTS
-# ---------------------------------------------------------
 
 def run_full_experiment_matrix():
     """
@@ -73,16 +61,10 @@ def run_full_experiment_matrix():
                         dataset_name=dataset_name
                     )
                     
-
-                    # save raw JSON
                     out_file = RAW_RESULTS_DIR / f"{dataset_name}_{clf_name}_{split}_trial{trial}.json"
                     with open(out_file, "w") as f:
                         json.dump(results, f, indent=4)
 
-
-# ---------------------------------------------------------
-# AGGREGATE RESULTS
-# ---------------------------------------------------------
 
 def aggregate_results():
     """

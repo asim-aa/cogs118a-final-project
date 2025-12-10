@@ -1,56 +1,43 @@
-from ucimlrepo import fetch_ucirepo
+import pandas as pd
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.impute import SimpleImputer
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
-import pandas as pd
 
 
 def load_dataset(name):
     """
-    Loads and preprocesses datasets:
-        - heart
-        - bank
-        - breast
-        
-    Steps:
-        1. Load
-        2. Impute numeric (median)
-        3. One-hot encode categoricals
-        4. Standardize numeric
+    Loads and preprocesses datasets from local CSVs.
+    Expects files:
+        data/heart.csv
+        data/bank.csv
+        data/breast.csv
+
+    Each CSV MUST contain a 'target' column.
     """
 
-    # -------------------------------------------------
-    # LOAD RAW
-    # -------------------------------------------------
-    if name == "heart":
-        data = fetch_ucirepo(id=45)
-        X = data.data.features.copy()
-        y = data.data.targets["num"].apply(lambda v: 1 if v > 0 else 0)
+    path = f"data/{name}.csv"
 
-    elif name == "bank":
-        data = fetch_ucirepo(id=222)
-        X = data.data.features.copy()
-        y = data.data.targets["y"].map({"yes": 1, "no": 0})
+    # ----------------------------
+    # Load local CSV
+    # ----------------------------
+    df = pd.read_csv(path)
 
-    elif name == "breast":
-        data = fetch_ucirepo(id=17)
-        X = data.data.features.copy()
-        y = data.data.targets["Diagnosis"].map({"M": 1, "B": 0})
+    if "target" not in df.columns:
+        raise ValueError(f"'target' column missing in {path}")
 
-    else:
-        raise ValueError(f"Unknown dataset: {name}")
+    y = df["target"]
+    X = df.drop(columns=["target"])
 
-
-    # -------------------------------------------------
-    # IDENTIFY COLUMN TYPES
-    # -------------------------------------------------
+    # ----------------------------
+    # Identify column types
+    # ----------------------------
     numeric_cols = X.select_dtypes(include=["int", "float"]).columns
     categorical_cols = X.select_dtypes(include=["object"]).columns
 
-    # -------------------------------------------------
-    # BUILD PREPROCESSOR
-    # -------------------------------------------------
+    # ----------------------------
+    # Preprocessing pipelines
+    # ----------------------------
     numeric_transformer = Pipeline(steps=[
         ("imputer", SimpleImputer(strategy="median")),
         ("scaler", StandardScaler())
@@ -68,9 +55,9 @@ def load_dataset(name):
         ]
     )
 
-    # -------------------------------------------------
-    # FIT + TRANSFORM
-    # -------------------------------------------------
+    # ----------------------------
+    # Fit + transform
+    # ----------------------------
     X_processed = preprocessor.fit_transform(X)
 
     return X_processed, y
