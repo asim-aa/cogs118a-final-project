@@ -2,24 +2,19 @@ import argparse
 import json
 import os
 from pathlib import Path
-from datetime import datetime
 
 from load_data import load_dataset
 from experiment import run_experiment
 from models import get_classifier_list
-from sklearn.metrics import f1_score, roc_auc_score, log_loss
 
-from sklearn.exceptions import ConvergenceWarning
-import warnings
-warnings.filterwarnings("ignore", category=ConvergenceWarning)
-warnings.filterwarnings("ignore", category=UserWarning)
-warnings.filterwarnings("ignore", category=FutureWarning)
-warnings.filterwarnings("ignore", category=RuntimeWarning)
-warnings.filterwarnings("ignore")
 
-DATASETS = ["heart", "bank", "breast"]
-TRAIN_SPLITS = [0.2, 0.5, 0.8]    
-TRIALS = [1, 2, 3]               
+# ---------------------------------------------------------
+# CONFIGURATION
+# ---------------------------------------------------------
+
+DATASETS = ["heart", "bank", "breast", "digits", "wine_quality"]
+TRAIN_SPLITS = [0.2, 0.5, 0.8]
+TRIALS = [1, 2, 3]
 
 RAW_RESULTS_DIR = Path("results/raw")
 AGG_RESULTS_DIR = Path("results/aggregated")
@@ -27,11 +22,15 @@ AGG_RESULTS_DIR = Path("results/aggregated")
 RAW_RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 AGG_RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
+
+# ---------------------------------------------------------
+# RUN FULL GRID
+# ---------------------------------------------------------
+
 def run_full_experiment_matrix():
     """
-    Runs the full grid:
-        3 datasets × 3 splits × 3 classifiers × 3 trials = 81 runs.
-    Saves raw JSON logs for each run.
+    Runs:
+       5 datasets × 3 splits × 3 classifiers × 3 trials = 135 runs
     """
     classifiers = get_classifier_list()
 
@@ -58,22 +57,26 @@ def run_full_experiment_matrix():
                         y=y,
                         train_ratio=split,
                         trial_id=trial,
-                        dataset_name=dataset_name
+                        dataset_name=dataset_name,
                     )
-                    
+
+                    # Save raw JSON
                     out_file = RAW_RESULTS_DIR / f"{dataset_name}_{clf_name}_{split}_trial{trial}.json"
                     with open(out_file, "w") as f:
                         json.dump(results, f, indent=4)
 
 
+# ---------------------------------------------------------
+# AGGREGATE RESULTS
+# ---------------------------------------------------------
+
 def aggregate_results():
     """
-    Reads every JSON file in results/raw/ and computes
-    mean + std test accuracy grouped by:
-        (dataset, classifier, split)
+    Reads every JSON file in results/raw/ and computes:
+    mean + std for train, val, test accuracy
+    grouped by (dataset, classifier, split)
     """
     import pandas as pd
-    import numpy as np
 
     records = []
 
@@ -92,7 +95,7 @@ def aggregate_results():
         })
 
     df = pd.DataFrame(records)
-    
+
     agg = df.groupby(["dataset", "classifier", "split"]).agg(
         mean_train_acc=("train_acc", "mean"),
         std_train_acc=("train_acc", "std"),
@@ -116,36 +119,50 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--test", action="store_true",
-                        help="Run only 1 quick experiment for debugging.")
+                        help="Run a quick experiment for ALL datasets.")
     parser.add_argument("--aggregate", action="store_true",
                         help="Aggregate raw results into CSV.")
 
     args = parser.parse_args()
 
+    # -----------------------------------------------------
+    # TEST MODE — NOW TESTS ALL DATASETS
+    # -----------------------------------------------------
     if args.test:
-        print("Running TEST experiment (1 dataset × 1 classifier × 1 split × 1 trial)")
+        print("Running TEST experiments (one classifier × all datasets)\n")
 
-        X, y = load_dataset("heart")  # smallest dataset
-        clf_name, clf, param_grid = get_classifier_list()[0]
+        clf_name, clf, param_grid = get_classifier_list()[0]  # SVM
 
-        results = run_experiment(
-            clf_name=clf_name,
-            clf=clf,
-            param_grid=param_grid,
-            X=X,
-            y=y,
-            train_ratio=0.2,
-            trial_id=1,
-            dataset_name="heart"
-        )
+        for dataset_name in DATASETS:
+            print(f"\n--- TESTING {dataset_name.upper()} ---")
 
-        print("\nTEST RUN RESULTS:\n", json.dumps(results, indent=4))
+            X, y = load_dataset(dataset_name)
 
+            results = run_experiment(
+                clf_name=clf_name,
+                clf=clf,
+                param_grid=param_grid,
+                X=X,
+                y=y,
+                train_ratio=0.2,
+                trial_id=1,
+                dataset_name=dataset_name,
+            )
+
+            print(json.dumps(results, indent=4))
+
+    # -----------------------------------------------------
+    # AGGREGATION MODE
+    # -----------------------------------------------------
     elif args.aggregate:
         aggregate_results()
 
+    # -----------------------------------------------------
+    # FULL EXPERIMENT
+    # -----------------------------------------------------
     else:
-        print("Running FULL EXPERIMENT GRID (81 runs)...")
+        total = len(DATASETS) * len(TRAIN_SPLITS) * len(get_classifier_list()) * len(TRIALS)
+        print(f"Running FULL EXPERIMENT GRID ({total} runs)...")
         run_full_experiment_matrix()
         print("\nDONE! Now run:")
         print("   python src/run_all.py --aggregate")

@@ -3,20 +3,33 @@ from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.impute import SimpleImputer
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
+import os
 
 
 def load_dataset(name):
     """
     Loads and preprocesses datasets from local CSVs.
-    Expects files:
-        data/heart.csv
-        data/bank.csv
-        data/breast.csv
+
+    Supported dataset names:
+        "heart"
+        "bank"
+        "breast"
+        "digits"
+        "wine_quality"
 
     Each CSV MUST contain a 'target' column.
     """
 
     path = f"data/{name}.csv"
+
+    # ----------------------------
+    # Check file existence
+    # ----------------------------
+    if not os.path.exists(path):
+        raise FileNotFoundError(
+            f"Dataset file not found: {path}\n"
+            f"Make sure you ran download_datasets.py first."
+        )
 
     # ----------------------------
     # Load local CSV
