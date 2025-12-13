@@ -5,7 +5,7 @@ from pathlib import Path
 
 from load_data import load_dataset
 from experiment import run_experiment
-from models import get_classifier_list
+from models import get_classifier_list, get_classifier
 
 
 # ---------------------------------------------------------
@@ -30,7 +30,7 @@ AGG_RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 def run_full_experiment_matrix():
     """
     Runs:
-       5 datasets × 3 splits × 3 classifiers × 3 trials = 135 runs
+       5 datasets × 3 splits × 4 classifiers × 3 trials = 180 runs
     """
     classifiers = get_classifier_list()
 
@@ -43,7 +43,7 @@ def run_full_experiment_matrix():
         for split in TRAIN_SPLITS:
             print(f"  -> Train ratio: {split}")
 
-            for clf_name, clf, param_grid in classifiers:
+            for clf_name, param_grid in classifiers:
                 print(f"     Classifier: {clf_name}")
 
                 for trial in TRIALS:
@@ -51,7 +51,7 @@ def run_full_experiment_matrix():
 
                     results = run_experiment(
                         clf_name=clf_name,
-                        clf=clf,
+                        clf_factory=lambda seed, name=clf_name: get_classifier(name, seed),
                         param_grid=param_grid,
                         X=X,
                         y=y,
@@ -89,6 +89,13 @@ def aggregate_results():
             "classifier": data["classifier"],
             "split": data["train_ratio"],
             "trial": data["trial_id"],
+            "seed": data.get("seed"),
+            "n_samples": data.get("n_samples"),
+            "n_features": data.get("n_features"),
+            "train_size": data.get("train_size"),
+            "test_size": data.get("test_size"),
+            "best_cv_score": data.get("best_cv_score"),
+            "best_params": data.get("best_params"),
             "train_acc": data["train_accuracy"],
             "val_acc": data["val_accuracy"],
             "test_acc": data["test_accuracy"]
@@ -103,6 +110,8 @@ def aggregate_results():
         std_val_acc=("val_acc", "std"),
         mean_test_acc=("test_acc", "mean"),
         std_test_acc=("test_acc", "std"),
+        mean_best_cv=("best_cv_score", "mean"),
+        std_best_cv=("best_cv_score", "std"),
     ).reset_index()
 
     out_file = AGG_RESULTS_DIR / "aggregated_results.csv"
@@ -131,7 +140,7 @@ if __name__ == "__main__":
     if args.test:
         print("Running TEST experiments (one classifier × all datasets)\n")
 
-        clf_name, clf, param_grid = get_classifier_list()[0]  # SVM
+        clf_name, param_grid = get_classifier_list()[0]  # SVM
 
         for dataset_name in DATASETS:
             print(f"\n--- TESTING {dataset_name.upper()} ---")
@@ -140,7 +149,7 @@ if __name__ == "__main__":
 
             results = run_experiment(
                 clf_name=clf_name,
-                clf=clf,
+                clf_factory=lambda seed, name=clf_name: get_classifier(name, seed),
                 param_grid=param_grid,
                 X=X,
                 y=y,

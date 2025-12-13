@@ -1,7 +1,10 @@
 import numpy as np
 from sklearn.model_selection import train_test_split, GridSearchCV, StratifiedKFold
 from sklearn.metrics import accuracy_score
-from sklearn.metrics import f1_score, roc_auc_score, log_loss
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.impute import SimpleImputer
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
 
 from sklearn.exceptions import ConvergenceWarning
 import warnings
@@ -15,21 +18,59 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 warnings.filterwarnings("ignore")
 
 
+def _build_preprocessor(X):
+    numeric_cols = X.select_dtypes(include=["int", "float"]).columns
+    categorical_cols = X.select_dtypes(include=["object"]).columns
 
-def run_experiment(clf_name, clf, param_grid, X, y, train_ratio, trial_id,dataset_name):
+    numeric_transformer = Pipeline(steps=[
+        ("imputer", SimpleImputer(strategy="median")),
+        ("scaler", StandardScaler())
+    ])
+
+    categorical_transformer = Pipeline(steps=[
+        ("imputer", SimpleImputer(strategy="most_frequent")),
+        ("onehot", OneHotEncoder(handle_unknown="ignore"))
+    ])
+
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ("num", numeric_transformer, numeric_cols),
+            ("cat", categorical_transformer, categorical_cols)
+        ]
+    )
+    return preprocessor
+
+
+def run_experiment(clf_name, clf_factory, param_grid, X, y, train_ratio, trial_id, dataset_name):
+    seed = trial_id
+    np.random.seed(seed)
 
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y,
+        X,
+        y,
         train_size=train_ratio,
         stratify=y,
-        random_state=trial_id
+        random_state=seed
     )
 
-    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=trial_id)
+    preprocessor = _build_preprocessor(X_train)
+    clf = clf_factory(seed)
+
+    # Prefix param grid for the pipeline
+    pipeline_param_grid = {f"clf__{k}": v for k, v in param_grid.items()}
+
+    pipeline = Pipeline(
+        steps=[
+            ("prep", preprocessor),
+            ("clf", clf),
+        ]
+    )
+
+    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=seed)
 
     grid = GridSearchCV(
-        estimator=clf,
-        param_grid=param_grid,
+        estimator=pipeline,
+        param_grid=pipeline_param_grid,
         scoring="accuracy",
         cv=cv,
         n_jobs=-1
@@ -39,21 +80,29 @@ def run_experiment(clf_name, clf, param_grid, X, y, train_ratio, trial_id,datase
 
     best_model = grid.best_estimator_
     best_params = grid.best_params_
-
-    best_model.fit(X_train, y_train)
+    # Drop pipeline prefix for logging
+    best_params_clean = {
+        (k.replace("clf__", "", 1) if k.startswith("clf__") else k): v
+        for k, v in best_params.items()
+    }
+    best_cv_score = grid.best_score_
 
     train_acc = accuracy_score(y_train, best_model.predict(X_train))
-    val_acc = grid.best_score_
     test_acc = accuracy_score(y_test, best_model.predict(X_test))
 
     return {
-        
         "dataset": dataset_name,
         "classifier": clf_name,
         "train_ratio": train_ratio,
         "trial_id": trial_id,
-        "best_params": best_params,
+        "seed": seed,
+        "n_samples": int(len(y)),
+        "n_features": int(X.shape[1]),
+        "train_size": int(len(y_train)),
+        "test_size": int(len(y_test)),
+        "best_params": best_params_clean,
+        "best_cv_score": float(best_cv_score),
         "train_accuracy": float(train_acc),
-        "val_accuracy": float(val_acc),
+        "val_accuracy": float(best_cv_score),
         "test_accuracy": float(test_acc)
     }

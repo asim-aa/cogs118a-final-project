@@ -1,8 +1,4 @@
 import pandas as pd
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
-from sklearn.impute import SimpleImputer
-from sklearn.compose import ColumnTransformer
-from sklearn.pipeline import Pipeline
 import os
 
 
@@ -42,35 +38,6 @@ def load_dataset(name):
     y = df["target"]
     X = df.drop(columns=["target"])
 
-    # ----------------------------
-    # Identify column types
-    # ----------------------------
-    numeric_cols = X.select_dtypes(include=["int", "float"]).columns
-    categorical_cols = X.select_dtypes(include=["object"]).columns
-
-    # ----------------------------
-    # Preprocessing pipelines
-    # ----------------------------
-    numeric_transformer = Pipeline(steps=[
-        ("imputer", SimpleImputer(strategy="median")),
-        ("scaler", StandardScaler())
-    ])
-
-    categorical_transformer = Pipeline(steps=[
-        ("imputer", SimpleImputer(strategy="most_frequent")),
-        ("onehot", OneHotEncoder(handle_unknown="ignore"))
-    ])
-
-    preprocessor = ColumnTransformer(
-        transformers=[
-            ("num", numeric_transformer, numeric_cols),
-            ("cat", categorical_transformer, categorical_cols)
-        ]
-    )
-
-    # ----------------------------
-    # Fit + transform
-    # ----------------------------
-    X_processed = preprocessor.fit_transform(X)
-
-    return X_processed, y
+    # Return raw features/labels; preprocessing is applied inside pipelines
+    # within the experiment to avoid leakage.
+    return X, y

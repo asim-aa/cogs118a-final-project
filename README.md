@@ -1,6 +1,6 @@
 # COGS118A Final Project
 
-This project reproduces the style of experiments from Caruana & Niculescu-Mizil (2006) by evaluating multiple machine-learning classifiers across several real-world datasets. The goal is to compare SVM, Random Forest, MLP, and KNN across different datasets and training splits using systematic cross-validation.
+This project reproduces the style of experiments from Caruana & Niculescu-Mizil (2006) by evaluating multiple machine-learning classifiers across several real-world datasets. The goal is to compare SVM, Random Forest, MLP, and KNN across different datasets and training splits using systematic cross-validation with leakage-free preprocessing and reproducible seeds.
 
 The project includes:
 
@@ -33,7 +33,13 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-4) Verify Python path
+4) Get data (if CSVs are missing)
+
+```bash
+python src/download_datasets.py
+```
+
+5) Verify Python path
 
 ```bash
 which python
@@ -47,14 +53,14 @@ It should point to:
 
 ## Running Experiments
 
-### Quick test run (1 dataset × 1 classifier × 1 split × 1 trial)
+### Quick test run (all datasets × 1 classifier × 1 split × 1 trial)
 Confirms the environment works.
 
 ```bash
 python src/run_all.py --test
 ```
 
-You should see JSON printed for a single SVM experiment, and a raw result saved to:
+You should see JSON printed for a single SVM experiment per dataset, and raw results saved to:
 
 ```bash
 results/raw/
@@ -69,10 +75,16 @@ python src/run_all.py
 
 Outputs:
 - Hundreds of individual results in `results/raw/`
-- Aggregated CSV at:
+- Aggregated CSV (after running the aggregation step below) at:
 
 ```bash
 results/aggregated/aggregated_results.csv
+```
+
+After the grid completes, create the aggregated table:
+
+```bash
+python src/run_all.py --aggregate
 ```
 
 ## Generate Figures
@@ -93,10 +105,20 @@ Evaluated on 5 UCI datasets:
 1. Bank Marketing
 2. Breast Cancer Wisconsin (Diagnostic)
 3. Heart Disease (Cleveland)
-4. Wine Quality (white/red combined as binary)
+4. Wine Quality (quality scores; red/white combined, multiclass)
 5. Digits (Pen-Based Recognition of Handwritten Digits)
 
-Preprocessing (label merging, normalization) happens in `src/load_data.py`.
+Preprocessing (impute, one-hot encode categoricals, standardize numerics) happens inside per-model Pipelines to avoid train/test leakage (see `src/experiment.py`).
+
+## Training / Tuning Protocol
+- 5-fold Stratified CV on the training split only.
+- Per trial, `random_state=trial_id` is applied to splits, CV folds, and stochastic models (RF/MLP/SVM).
+- Hyperparameter grids:
+  - SVM: `C` ∈ {0.1, 1, 10}, `gamma` ∈ {0.01, 0.1, "scale"}, kernel=rbf
+  - RF: `n_estimators` ∈ {100, 300}, `max_depth` ∈ {None, 10, 30}, `min_samples_split` ∈ {2, 4}, `max_features` ∈ {"sqrt", None}
+  - MLP: `hidden_layer_sizes` ∈ {(64,), (128,)}, `learning_rate_init` ∈ {0.001, 0.01}, `alpha` ∈ {0.0001, 0.001}, activation=relu
+  - KNN: `n_neighbors` ∈ {3, 5, 9}, `weights` ∈ {"uniform", "distance"}, `p` ∈ {1, 2}
+- Logged per run: dataset, classifier, split, trial/seed, n_samples, n_features, train/test sizes, best_params, best CV score, train/val/test accuracy. Aggregations compute mean±std per (dataset, classifier, split).
 
 ## Reproducibility
 All randomness controlled via NumPy/SKLearn seeds for repeatable results.

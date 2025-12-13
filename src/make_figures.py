@@ -6,10 +6,6 @@ import seaborn as sns
 import json
 from pathlib import Path
 
-from load_data import load_dataset
-from models import get_classifier_list, get_classifier
-from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
-
 sns.set(style="whitegrid")
 
 RESULTS_FILE = "results/aggregated/aggregated_results.csv"
@@ -18,9 +14,11 @@ OUTDIR = Path("results/figures")
 OUTDIR.mkdir(parents=True, exist_ok=True)
 
 df = pd.read_csv(RESULTS_FILE)
+df["split"] = pd.to_numeric(df["split"])
+df = df.sort_values("split")
 
 dataset_order = sorted(df["dataset"].unique())
-classifier_order = ["svm", "rf", "mlp"]
+classifier_order = ["svm", "rf", "mlp", "knn"]
 
 df["dataset"] = pd.Categorical(df["dataset"], categories=dataset_order, ordered=True)
 df["classifier"] = pd.Categorical(df["classifier"], categories=classifier_order, ordered=True)
@@ -47,10 +45,17 @@ plt.close()
 # FIGURE 3 — Error bars
 # ====================================================
 plt.figure(figsize=(12, 7))
-sns.barplot(
+ax = sns.barplot(
     data=df, x="classifier", y="mean_test_acc",
-    hue="dataset", capsize=0.2, errorbar=("sd")
+    hue="dataset"
 )
+# Overlay correct std error bars using precomputed std_test_acc
+for i, bar in enumerate(ax.patches):
+    # bars are grouped by hue; compute matching std index
+    mean = bar.get_height()
+    std = df.iloc[i]["std_test_acc"]
+    x = bar.get_x() + bar.get_width() / 2
+    ax.errorbar(x, mean, yerr=std, fmt="none", ecolor="black", capsize=4, lw=1)
 plt.title("Test Accuracy: Mean ± Standard Deviation")
 plt.savefig(OUTDIR / "test_accuracy_error_bars.png")
 plt.close()
@@ -59,6 +64,7 @@ plt.close()
 # FIGURE 4 — Heatmap of classifier performance
 # ====================================================
 pivot = df.pivot_table(index="dataset", columns="classifier", values="mean_test_acc")
+pivot = pivot[classifier_order]
 plt.figure(figsize=(10, 6))
 sns.heatmap(pivot, annot=True, cmap="viridis", fmt=".3f")
 plt.title("Classifier Performance Heatmap")
@@ -73,7 +79,7 @@ hyper_records = []
 for file in RAW_DIR.glob("*.json"):
     with open(file, "r") as f:
         data = json.load(f)
-    params = data["best_params"]
+    params = dict(data["best_params"])  # copy to avoid mutating the source dict
     params["classifier"] = data["classifier"]
     params["dataset"] = data["dataset"]
     params["val_acc"] = data["val_accuracy"]
@@ -153,4 +159,3 @@ plt.title("Overfitting Gap (Train - Validation Accuracy)")
 plt.ylabel("Gap")
 plt.savefig(OUTDIR / "train_val_gap.png")
 plt.close()
-
