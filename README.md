@@ -1,6 +1,6 @@
 # COGS118A Final Project
 
-This project reproduces the style of experiments from Caruana & Niculescu-Mizil (2006) by evaluating multiple machine-learning classifiers across several real-world datasets. The goal is to compare SVM, Random Forest, and MLP across different datasets and training splits using systematic cross-validation.
+This project reproduces the style of experiments from Caruana & Niculescu-Mizil (2006) by evaluating multiple machine-learning classifiers across several real-world datasets. The goal is to compare SVM, Random Forest, MLP, and KNN across different datasets and training splits using systematic cross-validation.
 
 The project includes:
 
@@ -61,7 +61,7 @@ results/raw/
 ```
 
 ### Full experiment run (all datasets, splits, classifiers)
-Runs 81+ experiments (5 datasets × 3 classifiers × 3 training splits: 20/80, 50/50, 80/20 × 3 repeated trials).
+Runs 180+ experiments (5 datasets × 4 classifiers × 3 training splits: 20/80, 50/50, 80/20 × 3 repeated trials).
 
 ```bash
 python src/run_all.py
@@ -106,7 +106,7 @@ All randomness controlled via NumPy/SKLearn seeds for repeatable results.
 - Breast Cancer → extremely high performance
 - Bank & Heart → mid-range accuracy
 - Wine Quality → hardest (~55–65%)
-- Random Forest typically best overall
+- Random Forest typically best overall; KNN competitive on some datasets with enough data
 - More training data → higher test accuracy
 
 These trends mirror Caruana & Niculescu-Mizil findings.
