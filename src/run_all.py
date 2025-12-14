@@ -60,7 +60,7 @@ def run_full_experiment_matrix():
                         dataset_name=dataset_name,
                     )
 
-                    # Save raw JSON
+                    
                     out_file = RAW_RESULTS_DIR / f"{dataset_name}_{clf_name}_{split}_trial{trial}.json"
                     with open(out_file, "w") as f:
                         json.dump(results, f, indent=4)
@@ -133,10 +133,6 @@ if __name__ == "__main__":
                         help="Aggregate raw results into CSV.")
 
     args = parser.parse_args()
-
-    # -----------------------------------------------------
-    # TEST MODE — NOW TESTS ALL DATASETS
-    # -----------------------------------------------------
     if args.test:
         print("Running TEST experiments (one classifier × all datasets)\n")
 
@@ -160,15 +156,10 @@ if __name__ == "__main__":
 
             print(json.dumps(results, indent=4))
 
-    # -----------------------------------------------------
-    # AGGREGATION MODE
-    # -----------------------------------------------------
+
     elif args.aggregate:
         aggregate_results()
 
-    # -----------------------------------------------------
-    # FULL EXPERIMENT
-    # -----------------------------------------------------
     else:
         total = len(DATASETS) * len(TRAIN_SPLITS) * len(get_classifier_list()) * len(TRIALS)
         print(f"Running FULL EXPERIMENT GRID ({total} runs)...")

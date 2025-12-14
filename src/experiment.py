@@ -9,8 +9,6 @@ from sklearn.pipeline import Pipeline
 from sklearn.exceptions import ConvergenceWarning
 import warnings
 
-
-
 warnings.filterwarnings("ignore", category=ConvergenceWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -19,8 +17,9 @@ warnings.filterwarnings("ignore")
 
 
 def _build_preprocessor(X):
-    numeric_cols = X.select_dtypes(include=["int", "float"]).columns
-    categorical_cols = X.select_dtypes(include=["object"]).columns
+    # Robust dtype detection
+    numeric_cols = X.select_dtypes(include=[np.number]).columns.tolist()
+    categorical_cols = X.select_dtypes(include=["object", "category", "bool"]).columns.tolist()
 
     numeric_transformer = Pipeline(steps=[
         ("imputer", SimpleImputer(strategy="median")),
@@ -32,12 +31,16 @@ def _build_preprocessor(X):
         ("onehot", OneHotEncoder(handle_unknown="ignore"))
     ])
 
-    preprocessor = ColumnTransformer(
-        transformers=[
-            ("num", numeric_transformer, numeric_cols),
-            ("cat", categorical_transformer, categorical_cols)
-        ]
-    )
+    transformers = []
+    if len(numeric_cols) > 0:
+        transformers.append(("num", numeric_transformer, numeric_cols))
+    if len(categorical_cols) > 0:
+        transformers.append(("cat", categorical_transformer, categorical_cols))
+
+    if len(transformers) == 0:
+        raise ValueError("No usable feature columns found (numeric or categorical).")
+
+    preprocessor = ColumnTransformer(transformers=transformers)
     return preprocessor
 
 
@@ -53,6 +56,7 @@ def run_experiment(clf_name, clf_factory, param_grid, X, y, train_ratio, trial_i
         random_state=seed
     )
 
+    # Build preprocessor using TRAIN ONLY (still safe; actual fitting happens inside CV folds)
     preprocessor = _build_preprocessor(X_train)
     clf = clf_factory(seed)
 
@@ -73,20 +77,22 @@ def run_experiment(clf_name, clf_factory, param_grid, X, y, train_ratio, trial_i
         param_grid=pipeline_param_grid,
         scoring="accuracy",
         cv=cv,
-        n_jobs=-1
+        n_jobs=-1,
+        error_score="raise"  
     )
 
     grid.fit(X_train, y_train)
 
     best_model = grid.best_estimator_
     best_params = grid.best_params_
+
     # Drop pipeline prefix for logging
     best_params_clean = {
         (k.replace("clf__", "", 1) if k.startswith("clf__") else k): v
         for k, v in best_params.items()
     }
-    best_cv_score = grid.best_score_
 
+    best_cv_score = grid.best_score_
     train_acc = accuracy_score(y_train, best_model.predict(X_train))
     test_acc = accuracy_score(y_test, best_model.predict(X_test))
 
