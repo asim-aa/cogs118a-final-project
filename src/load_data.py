@@ -35,9 +35,23 @@ def load_dataset(name):
     if "target" not in df.columns:
         raise ValueError(f"'target' column missing in {path}")
 
+    # ----------------------------
+    # Subsample BANK to speed up runtime (stratified)
+    # ----------------------------
+    if name == "bank" and len(df) > 15000:
+        N = 15000
+        df = df.groupby("target", group_keys=False).apply(
+            lambda g: g.sample(
+                n=max(1, int(N * len(g) / len(df))),
+                random_state=0
+            )
+        )
+
     y = df["target"]
     X = df.drop(columns=["target"])
 
-    # Return raw features/labels; preprocessing is applied inside pipelines
-    # within the experiment to avoid leakage.
+    # Ensure labels are numeric (important for MLP + sklearn internals)
+    if y.dtype == "object":
+        y = pd.factorize(y)[0]  # maps strings to {0,1,2,...}
+
     return X, y
