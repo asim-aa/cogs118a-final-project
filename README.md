@@ -11,6 +11,12 @@ The project includes:
 - Publication-quality figures
 - A final report following ML conference format (NeurIPS/ICML-style)
 
+## Recruiter-Friendly Overview
+- Built an end-to-end ML evaluation harness: automated runs, CV-based hyperparameter tuning, and leakage-safe preprocessing via Pipelines.
+- Reproducible experiments: deterministic seeds for splits, CV, and stochastic models; logged configs and scores per run.
+- Benchmarks 4 classifiers across 5 UCI datasets and 3 train/test splits (180+ runs) with aggregation and reporting plots.
+- Outputs include raw JSON logs, an aggregated CSV, and ready-to-use figures for reports.
+
 ## Setup Instructions
 
 1) Clone or download the project
@@ -98,7 +104,7 @@ Plots saved to `results/figures/`:
 - `test_accuracy_by_classifier_dataset.png` (bar chart)
 - `accuracy_vs_split.png` (line chart)
 - `test_accuracy_error_bars.png` (error bars)
-- `performance_heatmap.png` (heatmap)
+
 
 ## Datasets Used
 Evaluated on 5 UCI datasets:
@@ -114,10 +120,10 @@ Preprocessing (impute, one-hot encode categoricals, standardize numerics) happen
 - 5-fold Stratified CV on the training split only.
 - Per trial, `random_state=trial_id` is applied to splits, CV folds, and stochastic models (RF/MLP/SVM).
 - Hyperparameter grids:
-  - SVM: `C` ∈ {0.1, 1, 10}, `gamma` ∈ {0.01, 0.1, "scale"}, kernel=rbf
-  - RF: `n_estimators` ∈ {100, 300}, `max_depth` ∈ {None, 10, 30}, `min_samples_split` ∈ {2, 4}, `max_features` ∈ {"sqrt", None}
-  - MLP: `hidden_layer_sizes` ∈ {(64,), (128,)}, `learning_rate_init` ∈ {0.001, 0.01}, `alpha` ∈ {0.0001, 0.001}, activation=relu
-  - KNN: `n_neighbors` ∈ {3, 5, 9}, `weights` ∈ {"uniform", "distance"}, `p` ∈ {1, 2}
+  - SVM: `C` ∈ {1, 10}, `gamma` ∈ {0.01, "scale"}, kernel=rbf
+  - RF: `n_estimators` ∈ {200}, `max_depth` ∈ {None, 20}, `min_samples_split` ∈ {2}, `max_features` ∈ {"sqrt"}
+  - MLP: `hidden_layer_sizes` ∈ {(64,), (128,)}, `learning_rate_init` ∈ {0.001}, `alpha` ∈ {0.0001, 0.001}, activation=relu
+  - KNN: `n_neighbors` ∈ {5, 9}, `weights` ∈ {"uniform", "distance"}, `p` ∈ {2}
 - Logged per run: dataset, classifier, split, trial/seed, n_samples, n_features, train/test sizes, best_params, best CV score, train/val/test accuracy. Aggregations compute mean±std per (dataset, classifier, split).
 
 ## Reproducibility
