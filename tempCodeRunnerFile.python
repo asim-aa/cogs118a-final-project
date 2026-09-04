@@ -1,3 +1,0 @@
-import pandas as pd
-df = pd.read_csv("results/aggregated/aggregated_results.csv")
-print(df["dataset"].unique())

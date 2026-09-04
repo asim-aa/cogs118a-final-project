@@ -11,6 +11,8 @@ The project includes:
 - Publication-quality figures
 - A final report following ML conference format (NeurIPS/ICML-style)
 
+📄 [Read the full report](report.pdf) — written in NeurIPS/ICML format.
+
 ## Recruiter-Friendly Overview
 - Built an end-to-end ML evaluation harness: automated runs, CV-based hyperparameter tuning, and leakage-safe preprocessing via Pipelines.
 - Reproducible experiments: deterministic seeds for splits, CV, and stochastic models; logged configs and scores per run.
